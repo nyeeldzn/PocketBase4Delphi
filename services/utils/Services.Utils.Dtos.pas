@@ -5,16 +5,31 @@ interface
 uses
   {$IFnDEF FPC}
   System.JSON;
+
   {$ELSE}
   fpjson, jsonparser;
   {$ENDIF}
 
 type
+
+  { TTuple }
+
+  TTuple = class
+  private
+    fKey: string;
+    fValue: variant;
+  public
+    constructor Create(AKey: string; AValue: variant);
+
+    property key: string read fkey write fkey;
+    property Value: variant read fValue write fValue;
+  end;
+
   ListResult<T> = record
-    page: Integer;
-    perPage: Integer;
-    totalItems: Integer;
-    totalPages: Integer;
+    page: integer;
+    perPage: integer;
+    totalItems: integer;
+    totalPages: integer;
     items: array of T;
   end;
 
@@ -22,29 +37,29 @@ type
     id: string;
     created: string;
     updated: string;
-   // otherFields: array of TJsonPair; // Replace TKeyValue with appropriate type
+    // otherFields: array of TJsonPair; // Replace TKeyValue with appropriate type
   end;
 
   AdminModel = class(BaseModel)
-    avatar: Integer;
+    avatar: integer;
     email: string;
   end;
 
   SchemaField = record
     id: string;
-    name: string;
+    Name: string;
     &type: string;
-    System: Boolean;
-    required: Boolean;
+    System: boolean;
+    required: boolean;
     //options: array of TJsonPair; // Replace TKeyValue with appropriate type
   end;
 
   CollectionModel = class(BaseModel)
-    name: string;
+    Name: string;
     &type: string;
     schema: array of SchemaField;
     indexes: array of string;
-    System: Boolean;
+    System: boolean;
     listRule: string;
     viewRule: string;
     createRule: string;
@@ -63,7 +78,7 @@ type
   LogRequestModel = class(BaseModel)
     url: string;
     method: string;
-    status: Integer;
+    status: integer;
     auth: string;
     remoteIp: string;
     userIp: string;
@@ -75,9 +90,17 @@ type
   RecordModel = class(BaseModel)
     collectionId: string;
     collectionName: string;
-   // expand: array of TJsonPair; // Replace TKeyValue with appropriate type
+    // expand: array of TJsonPair; // Replace TKeyValue with appropriate type
   end;
 
 implementation
+
+{ TTuple }
+
+constructor TTuple.Create(AKey: string; AValue: variant);
+begin
+  FKey := AKey;
+  FValue := AValue;
+end;
 
 end.

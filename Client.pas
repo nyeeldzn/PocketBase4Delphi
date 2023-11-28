@@ -24,7 +24,7 @@ const
 type
   TOptions            = TDictionary<string, Variant>;
   TBeforeSendResult   = TDictionary<string, Variant>;
-  TBeforeSendDelegate = function(url: string; Options: SendOptions): TBeforeSendResult of object;
+  TBeforeSendDelegate = function(url: string; Options: QueryOptions): TBeforeSendResult of object;
   TAfterSendFunc      = function(response: string; data: string)        : string of object;
 
   PBClient = class
@@ -58,7 +58,7 @@ begin
   if
     not FRecordServices.ContainsKey(ANameOrId)
   then
-    FRecordServices.Add(ANameOrId, RecordService.Create(FBaseURL, ANameOrId));
+    FRecordServices.Add(ANameOrId, RecordService.Create(Self, FBaseURL, ANameOrId));
 
   result := FRecordServices[ANameOrId];
 end;

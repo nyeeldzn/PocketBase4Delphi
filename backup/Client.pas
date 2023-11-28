@@ -58,7 +58,7 @@ begin
   if
     not FRecordServices.ContainsKey(ANameOrId)
   then
-    FRecordServices.Add(ANameOrId, RecordService.Create(ANameOrId));
+    FRecordServices.Add(ANameOrId, RecordService.Create(Self, FBaseURL, ANameOrId));
 
   result := FRecordServices[ANameOrId];
 end;
