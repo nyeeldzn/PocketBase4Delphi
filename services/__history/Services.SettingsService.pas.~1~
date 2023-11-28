@@ -1,0 +1,7 @@
+unit Services.SettingsService;
+
+interface
+
+implementation
+
+end.

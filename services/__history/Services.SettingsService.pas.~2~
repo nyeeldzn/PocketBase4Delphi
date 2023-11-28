@@ -1,0 +1,15 @@
+unit Services.SettingsService;
+
+interface
+
+uses
+  Services.Utils.BaseService;
+
+type
+  SettingsService = class(BaseService)
+
+  end;
+
+implementation
+
+end.

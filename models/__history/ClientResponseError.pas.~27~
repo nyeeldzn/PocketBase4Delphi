@@ -1,0 +1,72 @@
+unit ClientResponseError;
+
+interface
+
+uses
+  System.Variants,
+  System.Generics.Collections,
+  System.SysUtils;
+
+type
+
+  ResponseError = record
+    Url: String;
+    Status: Integer;
+    Data: string;
+    isAborted: Boolean;
+    OriginalError: Variant;
+    Response: TDictionary<string, Variant>;
+
+    function isPreenchido: Boolean;
+  end;
+
+  EClientResponseError = class(Exception)
+  private
+    FUrl          : string;
+    FStatus       : Integer;
+    FResponse     : TDictionary<string, Variant>;
+    FIsAbort      : Boolean;
+    FOriginalError: Variant;
+
+  public
+    constructor Create(AErrorData: ResponseError); reintroduce;
+
+  end;
+
+implementation
+
+{ EClientResponseError }
+
+constructor EClientResponseError.Create(AErrorData: ResponseError);
+begin
+  inherited Create('ClientResponseError');
+
+  if
+    AErrorData.isPreenchido
+  then
+  begin
+    FUrl           := AErrorData.Url;
+    FStatus        := AErrorData.Status;
+    FIsAbort       := AErrorData.isAborted;
+    FOriginalError := AErrorData.OriginalError;
+
+    if
+      Assigned(AErrorData.Response)
+    then
+      FResponse := AErrorData.Response
+    else
+    begin
+      // FResponse := AErrorData.Data;
+    end
+
+  end;
+end;
+
+{ ResponseError }
+
+function ResponseError.isPreenchido: Boolean;
+begin
+  Result := (Url <> '') and (Status <> -1) and (Data <> '')
+end;
+
+end.

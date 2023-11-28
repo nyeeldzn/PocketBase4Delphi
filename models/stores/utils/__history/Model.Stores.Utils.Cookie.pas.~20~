@@ -1,0 +1,249 @@
+unit Model.Stores.Utils.Cookie;
+
+interface
+
+uses
+  System.SysUtils,
+  System.NetEncoding,
+  System.RegularExpressions,
+  System.Generics.Collections;
+
+const
+  FieldContentRegExp = '^[\u0009\u0020-\u007e\u0080-\u00ff]+$';
+
+type
+  TDecodeFunction = function(const Val: string): string;
+
+  TSerializeOptions = record
+    Encode: function(Val: string; Num: Integer; Bool: Boolean): string;
+    MaxAge: Integer;
+    Domain: string;
+    Path: string;
+    Expires: TDateTime;
+    HttpOnly: Boolean;
+    Secure: Boolean;
+    Priority: string;
+    SameSite: string;
+  end;
+
+  TParseOptions = class
+  private
+    FDecode: TDecodeFunction;
+  public
+    property Decode: TDecodeFunction read FDecode write FDecode;
+  end;
+
+function CookieParse(const Str: string; Options: TParseOptions = nil): TDictionary<string, string>;
+function CookieSerialize(name, Val: string; Options: TSerializeOptions): string;
+function DefaultDecode(const Val: string): string;
+
+implementation
+
+function CookieParse(const Str: string; Options: TParseOptions = nil): TDictionary<string, string>;
+var
+  ResultDict          : TDictionary<string, string>;
+  Opt                 : TParseOptions;
+  DecodeFunc          : TDecodeFunction;
+  Index, EqIdx, EndIdx: Integer;
+  Key, Val            : string;
+begin
+  ResultDict := TDictionary<string, string>.Create;
+
+  if Str = '' then
+    Exit(ResultDict);
+
+  Opt        := TParseOptions.Create;
+  Opt.Decode := DefaultDecode;
+  //
+  // if
+  // Assigned(Options)
+  // then
+  // MergeParseOptions(Opt, Options);
+
+  DecodeFunc := Opt.Decode;
+
+  Index := 1;
+  while Index <= Length(Str) do
+  begin
+    EqIdx := Pos('=', Str, Index);
+
+    // No more cookie pairs
+    if
+      EqIdx = 0
+    then
+      Break;
+
+    EndIdx := Pos(';', Str, Index);
+
+    if
+      EndIdx = 0
+    then
+      EndIdx := Length(Str) + 1
+    else
+      if
+      EndIdx < EqIdx
+    then
+    begin
+      Index := LastDelimiter(';', Copy(Str, 1, EqIdx - 1)) + 1;
+      Continue;
+    end;
+
+    Key := Trim(Copy(Str, Index, EqIdx - Index));
+
+    // Only assign once
+    if
+      not ResultDict.ContainsKey(Key)
+    then
+    begin
+      Val := Trim(Copy(Str, EqIdx + 1, EndIdx - EqIdx - 1));
+
+      // Quoted values
+      if
+        Ord(Val[1]) = $22
+      then
+        Val := Copy(Val, 2, Length(Val) - 2);
+
+      try
+        ResultDict.Add(Key, DecodeFunc(Val));
+      except
+        ResultDict.Add(Key, Val); // No decoding
+      end;
+    end;
+
+    Index := EndIdx + 1;
+  end;
+
+  Result := ResultDict;
+end;
+
+function CookieSerialize(name, Val: string; Options: TSerializeOptions): string;
+var
+  optEncode         : function(Val: string; Num: Integer; Bool: Boolean): string;
+  MaxAge            : Integer;
+  Priority, SameSite: string;
+begin
+  if
+    not TRegEx.IsMatch(name, FieldContentRegExp)
+  then
+    raise Exception.Create('argument name is invalid');
+
+  optEncode := Options.Encode;
+
+  if
+    not Assigned(optEncode)
+  then
+    optEncode := DefaultEncode;
+
+  Val := optEncode(Val);
+
+  if
+    (Val <> '') and (not TRegEx.IsMatch(Val, FieldContentRegExp))
+  then
+    raise Exception.Create('argument val is invalid');
+
+  Result := name + '=' + Val;
+
+  MaxAge := Options.MaxAge;
+
+  if
+    MaxAge <> 0
+  then
+  begin
+    if (MaxAge <> 0) and (not IsFinite(MaxAge)) then
+      raise Exception.Create('option maxAge is invalid');
+
+    Result := Result + '; Max-Age=' + IntToStr(Trunc(MaxAge));
+  end;
+
+  if
+    Options.Domain <> ''
+  then
+  begin
+    if not TRegEx.IsMatch(Options.Domain, FieldContentRegExp) then
+      raise Exception.Create('option domain is invalid');
+
+    Result := Result + '; Domain=' + Options.Domain;
+  end;
+
+  if
+    Options.Path <> ''
+  then
+  begin
+    if
+      not TRegEx.IsMatch(Options.Path, FieldContentRegExp)
+    then
+      raise Exception.Create('option path is invalid');
+
+    Result := Result + '; Path=' + Options.Path;
+  end;
+
+  if
+    Options.Expires <> 0
+  then
+  begin
+    if
+      Options.Expires = 0
+    then
+      raise Exception.Create('option expires is invalid');
+
+    Result := Result + '; Expires=' + FormatDateTime('ddd, dd mmm yyyy hh:nn:ss "GMT"', Options.Expires);
+  end;
+
+  if
+    Options.HttpOnly
+  then
+    Result := Result + '; HttpOnly';
+
+  if
+    Options.Secure
+  then
+    Result := Result + '; Secure';
+
+  Priority := LowerCase(Options.Priority);
+  if
+    Priority <> ''
+  then
+  begin
+    case Priority of
+      'low':
+        Result := Result + '; Priority=Low';
+      'medium':
+        Result := Result + '; Priority=Medium';
+      'high':
+        Result := Result + '; Priority=High';
+    else
+      raise Exception.Create('option priority is invalid');
+    end;
+  end;
+
+  SameSite := LowerCase(Options.SameSite);
+  if
+    SameSite <> '' then
+
+  begin
+    case SameSite of
+      'true':
+        Result := Result + '; SameSite=Strict';
+      'lax':
+        Result := Result + '; SameSite=Lax';
+      'strict':
+        Result := Result + '; SameSite=Strict';
+      'none':
+        Result := Result + '; SameSite=None';
+    else
+      raise Exception.Create('option sameSite is invalid');
+    end;
+  end;
+end;
+
+function DefaultDecode(const Val: string): string;
+begin
+  if
+    Pos('%', Val) <> 0
+  then
+    Result := TNetEncoding.URL.Decode(Val)
+  else
+    Result := Val;
+end;
+
+end.

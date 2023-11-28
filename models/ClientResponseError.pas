@@ -1,0 +1,133 @@
+unit ClientResponseError;
+
+{$IFDEF FPC}
+  {$MODE Delphi}
+{$ENDIF}
+
+interface
+
+uses
+{$IFnDEF FPC}
+  System.JSON;
+{$ELSE}
+  TypInfo, Rtti, fpjson, jsonparser,
+{$ENDIF}
+ SysUtils, Generics.Collections, Variants;
+
+
+type
+
+  ResponseError = record
+    Url: String;
+    Status: Integer;
+    Data: string;
+    isAborted: Boolean;
+    OriginalError: Variant;
+    Response: TDictionary<string, Variant>;
+
+    function isPreenchido: Boolean;
+  end;
+
+  EClientResponseError = class(Exception)
+  private
+    FUrl          : string;
+    FStatus       : Integer;
+    FResponse     : TDictionary<string, Variant>;
+    FIsAbort      : Boolean;
+    FOriginalError: Variant;
+
+  public
+    constructor Create(AErrorData: ResponseError); reintroduce;
+    property Data: TDictionary<String, Variant> read FResponse;
+    function toJSON: string;
+  end;
+
+implementation
+
+{ EClientResponseError }
+
+constructor EClientResponseError.Create(AErrorData: ResponseError);
+begin
+  inherited Create('ClientResponseError');
+
+  if
+    AErrorData.isPreenchido
+  then
+  begin
+    FUrl           := AErrorData.Url;
+    FStatus        := AErrorData.Status;
+    FIsAbort       := AErrorData.isAborted;
+    FOriginalError := AErrorData.OriginalError;
+
+    if
+      Assigned(AErrorData.Response)
+    then
+      FResponse := AErrorData.Response
+    else
+    begin
+      // FResponse := AErrorData.Data;
+    end;
+
+    Self.Message := FResponse.ToString;
+
+    if
+      Self.Message = ''
+    then
+    begin
+      if
+        FIsAbort
+      then
+        Self.Message := 'The request was autocancelled. You can find more info in https://github.com/pocketbase/js-sdk#auto-cancellation.'
+      else
+        // if  this.message = 'Failed to connect to the PocketBase server. Try changing the SDK URL from localhost to 127.0.0.1 (https://github.com/pocketbase/js-sdk/issues/21).'; then
+        Self.Message := 'Something went wrong while processing your request.';
+    end;
+
+  end
+end;
+
+function EClientResponseError.toJSON: string;
+var
+  Ctx       : TRttiContext;
+  ObjType   : TRttiType;
+  Prop      : TRttiProperty;
+  JsonObject: TJSONObject;
+begin
+  JsonObject := TJSONObject.Create;
+  try
+    Ctx := TRttiContext.Create;
+    try
+      ObjType := Ctx.GetType(Self.ClassType);
+      for Prop in ObjType.GetProperties do
+      begin
+        if not Prop.IsReadable then
+          Continue;
+        case Prop.PropertyType.TypeKind of
+          tkInteger, tkInt64:
+          begin
+          end;
+           // JsonObject.AddPair(Prop.Name, TJSONNumber.Create(Prop.GetValue(Self).AsInteger));
+          tkString, tkUString:
+          begin
+          end;
+           // JsonObject.AddPair(Prop.Name, Prop.GetValue(Self).AsString);
+          // Adicione mais casos conforme necessário para outros tipos suportados
+        end;
+      end;
+    finally
+      Ctx.Free;
+    end;
+    //Result := JsonObject.toJSON;
+  finally
+    JsonObject.Free;
+  end;
+end;
+
+{ ResponseError }
+
+function ResponseError.isPreenchido: Boolean;
+begin
+  Result := (Url <> '') and (Status <> -1) and (Data <> '')
+end;
+
+end.

@@ -1,0 +1,32 @@
+unit Services.SettingsService;
+
+interface
+
+uses
+  System.Generics.Collections,
+  Services.Utils.Options,
+  Services.Utils.BaseService;
+
+type
+  SettingsService = class(BaseService)
+    function GetAll(AOptions: CommonOptions): TDictionary<String, Variant>;
+    function Update(ABodyParams: TDictionary<String, Variant>; AOptions: CommonOptions): TDictionary<String, Variant>;
+  end;
+
+implementation
+
+{ SettingsService }
+
+function SettingsService.GetAll(
+  AOptions: CommonOptions): TDictionary<String, Variant>;
+begin
+
+end;
+
+function SettingsService.Update(ABodyParams: TDictionary<String, Variant>;
+  AOptions: CommonOptions): TDictionary<String, Variant>;
+begin
+
+end;
+
+end.

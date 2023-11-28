@@ -1,0 +1,157 @@
+unit Model.Store.BaseAuthStore;
+
+interface
+
+uses
+  System.SysUtils,
+  System.JSON,
+  REST.JSON,
+  System.Generics.Collections,
+  Model.Stores.Utils.Jwt;
+
+const
+  DEFAULT_COOCKIE_KEY = 'pb_auth';
+
+implementation
+
+type
+  AuthModel = TJSONPair;
+
+  OnStoreChangeFunction = reference to
+    procedure(AToken: string; AModel: AuthModel);
+
+  BaseAuthStore = class abstract
+  protected
+    FBaseToken: string;
+    FBaseModel: AuthModel;
+  private
+    FOnChangeCallbacks: TList<OnStoreChangeFunction>;
+    procedure triggerChange();
+    function onChange(ACallback: OnStoreChangeFunction; AFireImmediately: boolean = False): TProc;
+  public
+    property Token: string read FBaseToken;
+    property Model: AuthModel read FBaseModel;
+
+    function IsValid(): boolean;
+    function IsAdmin(): boolean;
+    function IsAuthRecord(): boolean;
+
+    procedure LoadFromCookie(cookie: string; Key: string = DEFAULT_COOCKIE_KEY);
+
+    procedure Save(AToken: string; AModel: AuthModel);
+    procedure Clear();
+  end;
+
+  { BaseAuthStore }
+
+function BaseAuthStore.IsAdmin: boolean;
+begin
+  Result := TJWTUtils.getTokenPayload(self.Token).GetValue('type').ToString = 'admin';
+end;
+
+function BaseAuthStore.IsAuthRecord: boolean;
+begin
+  Result := TJWTUtils.getTokenPayload(self.Token).GetValue('type').ToString = 'authRecord';
+end;
+
+function BaseAuthStore.IsValid: boolean;
+begin
+  Result := not TJWTUtils.IsTokenExpired(self.Token)
+end;
+
+procedure BaseAuthStore.LoadFromCookie(cookie, Key: string);
+var
+  jsonObject  : TJSONObject;
+  rawData     : string;
+  data        : TJSONObject;
+  Token: string;
+  Model: TJSONValue;
+begin
+  jsonObject := TJSONObject.Create;
+  data       := TJSONObject.Create;
+
+  try
+    jsonObject := TJSONObject.ParseJSONValue(cookie) as TJSONObject;
+    if Assigned(jsonObject) then
+    begin
+      rawData := jsonObject.GetValue(Key).Value;
+
+      try
+        data := TJSONObject.ParseJSONValue(rawData) as TJSONObject;
+      except
+        on E: EJSONException do
+        begin
+          Exit;
+        end;
+      end;
+
+      // Normalização
+      if
+        not Assigned(data) or
+        not(data is TJSONObject)
+      then
+      begin
+        data.Free;
+        data := TJSONObject.Create;
+      end;
+
+      // Obter os valores token e model
+      Token := data.GetValue('token').Value;
+     // Model := data.GetValue('model');
+
+      // Chamada para função Save
+      Save(Token, AuthModel.Create('', ''));
+    end;
+  finally
+    jsonObject.Free;
+    data.Free;
+  end;
+
+end;
+
+function BaseAuthStore.onChange(ACallback: OnStoreChangeFunction;
+  AFireImmediately: boolean): TProc;
+begin
+  FOnChangeCallbacks.Add(ACallback);
+
+  if
+    AFireImmediately
+  then
+    ACallback(self.Token, self.Model);
+
+  Result := procedure
+    begin
+      FOnChangeCallbacks.Remove(ACallback);
+    end;
+end;
+
+procedure BaseAuthStore.triggerChange;
+begin
+  if
+    Assigned(FOnChangeCallbacks)
+  then
+  begin
+    for var callback in FOnChangeCallbacks do
+    begin
+      callback(self.Token, self.Model)
+    end;
+  end;
+end;
+
+procedure BaseAuthStore.Save(AToken: string; AModel: AuthModel);
+begin
+  FBaseToken := AToken;
+  FBaseModel := AModel;
+
+  triggerChange();
+end;
+
+procedure BaseAuthStore.Clear;
+begin
+  FBaseToken := '';
+  FBaseModel := nil;
+
+  triggerChange();
+end;
+
+end.

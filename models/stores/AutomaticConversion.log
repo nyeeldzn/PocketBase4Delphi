@@ -1,0 +1,54 @@
+DEMO.lpi Note: Added defines -dBorland -dVer150 -dDelphi7 -dCompiler6_Up -dPUREPASCAL in custom options
+ Progress: Found all unit files
+DEMO.dpr(1,14) Note: Added MODE Delphi syntax modifier after unit name.
+ : 
+ : *** Converting unit files belonging to project/package ***
+main.pas(1,11) Note: Added MODE Delphi syntax modifier after unit name.
+Client.pas(1,13) Note: Added MODE Delphi syntax modifier after unit name.
+ClientResponseError.pas Note: Changed encoding from ISO-8859-1 to UTF-8
+ClientResponseError.pas(1,26) Note: Added MODE Delphi syntax modifier after unit name.
+Model.Store.BaseAuthStore.pas Note: Changed encoding from ISO-8859-1 to UTF-8
+ : 
+ Error: Exception happened during unit conversion. Continuing with form files of already converted units...
+ : 
+ : *** Fixing used units and Repairing form files ***
+main.pas Note: Removed property "TextHeight".
+main.pas Note: Removed property "PixelsPerInch".
+main.pas Note: Removed property "OldCreateOrder".
+main.pas Note: Removed property "Font.Style".
+main.pas Note: Removed property "Font.Name".
+main.pas Note: Removed property "Font.Height".
+main.pas Note: Removed property "Font.Color".
+main.pas Note: Removed property "Font.Charset".
+main.pas Note: Removed property "Color".
+main.pas Note: Removed property "ClientWidth".
+main.pas Note: Removed property "ClientHeight".
+main.pas Note: Removed property "Caption".
+main.pas Note: Removed property "Top".
+main.pas Note: Removed property "Left".
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+main.pas Note: Added unit "StdCtrls" to uses section.
+ Fatal: Conversion Aborted.

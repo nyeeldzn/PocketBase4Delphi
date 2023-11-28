@@ -1,0 +1,7 @@
+unit Services.Utils.BaseService;
+
+interface
+
+implementation
+
+end.

@@ -1,0 +1,12 @@
+unit BaseAuthStore;
+
+interface
+
+const
+  DEFAULT_COOCKIE_KEY = 'pb_auth';
+
+implementation
+
+class BaseAuthStore
+
+end.

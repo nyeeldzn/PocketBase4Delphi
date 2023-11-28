@@ -1,0 +1,35 @@
+unit Services.Utils.Options;
+
+interface
+
+uses
+  System.Generics.Collections,
+  System.JSON,
+  Rest.JSON;
+
+type
+  TFetchFunc = function(url: string; config: RequestInit): TJSONObject of object;
+
+  THeaders = TDictionary<string, string>;
+
+  TQueryParams = TDictionary<string, Variant>;
+
+  TSendOptions = class
+    fetch: TFetchFunc;
+    headers: THeaders;
+    body: Variant;
+    query: TQueryParams;
+    requestKey: string;
+    // Other deprecated fields can be omitted or marked as deprecated.
+  end;
+
+  TCommonOptions = class(TSendOptions)
+  private
+    FFields: string;
+  public
+    property Fields: string read FFields write FFields;
+  end;
+
+implementation
+
+end.

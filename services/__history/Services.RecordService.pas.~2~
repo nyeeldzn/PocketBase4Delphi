@@ -1,0 +1,13 @@
+unit Services.RecordService;
+
+interface
+
+uses
+  Services.Utils.CrudServices;
+
+type
+  RecordService = class(CrudService<>)
+
+implementation
+
+end.

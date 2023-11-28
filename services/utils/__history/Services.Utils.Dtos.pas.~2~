@@ -1,0 +1,96 @@
+unit Services.Utils.Dtos;
+
+interface
+
+uses
+  System.JSON,
+
+type
+  ListResult<T> = record
+    page: Integer;
+    perPage: Integer;
+    totalItems: Integer;
+    totalPages: Integer;
+    items: array of T;
+  end;
+
+  BaseModel = record
+    id: string;
+    created: string;
+    updated: string;
+    otherFields: array of TJsonPair; // Replace TKeyValue with appropriate type
+  end;
+
+  AdminModel = record
+    id: string;
+    created: string;
+    updated: string;
+    avatar: Integer;
+    email: string;
+    otherFields: array of TJsonPair; // Replace TKeyValue with appropriate type
+  end;
+
+  SchemaField = record
+    id: string;
+    name: string;
+    &type: string;
+    System: Boolean;
+    required: Boolean;
+    options: array of TJsonPair; // Replace TKeyValue with appropriate type
+  end;
+
+  CollectionModel = record
+    id: string;
+    created: string;
+    updated: string;
+    name: string;
+    &type: string;
+    schema: array of SchemaField;
+    indexes: array of string;
+    System: Boolean;
+    listRule: string;
+    viewRule: string;
+    createRule: string;
+    updateRule: string;
+    deleteRule: string;
+    options: array of TJsonPair; // Replace TKeyValue with appropriate type
+  end;
+
+  ExternalAuthModel = record
+    id: string;
+    created: string;
+    updated: string;
+    recordId: string;
+    collectionId: string;
+    provider: string;
+    providerId: string;
+    otherFields: array of TJsonPair; // Replace TKeyValue with appropriate type
+  end;
+
+  LogRequestModel = record
+    id: string;
+    created: string;
+    updated: string;
+    url: string;
+    method: string;
+    status: Integer;
+    auth: string;
+    remoteIp: string;
+    userIp: string;
+    referer: string;
+    userAgent: string;
+    meta: array of TJsonPair; // Replace TKeyValue with appropriate type
+  end;
+
+  RecordModel = record
+    id: string;
+    created: string;
+    updated: string;
+    collectionId: string;
+    collectionName: string;
+    expand: array of TJsonPair; // Replace TKeyValue with appropriate type
+  end;
+
+implementation
+
+end.

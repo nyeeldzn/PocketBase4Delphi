@@ -1,0 +1,15 @@
+unit Services.CollectionServices;
+
+interface
+
+uses
+  Services.Utils.Dtos;
+
+type
+  CollectionService = class(CollectionModel)
+
+  end;
+
+implementation
+
+end.

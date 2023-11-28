@@ -1,0 +1,19 @@
+program DEMO;
+
+uses
+  Vcl.Forms,
+  main in '..\..\main.pas' {Form1},
+  Client in '..\..\Client.pas',
+  ClientResponseError in '..\ClientResponseError.pas',
+  Model.Store.BaseAuthStore in 'Model.Store.BaseAuthStore.pas',
+  Model.Stores.Utils.Jwt in 'utils\Model.Stores.Utils.Jwt.pas',
+  Model.Stores.Utils.Cookie in 'utils\Model.Stores.Utils.Cookie.pas';
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.CreateForm(TForm1, Form1);
+  Application.Run;
+end.

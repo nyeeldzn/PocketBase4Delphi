@@ -1,0 +1,16 @@
+unit Services.CollectionServices;
+
+interface
+
+uses
+  Services.Utils.CrudServices,
+  Services.Utils.Dtos;
+
+type
+  CollectionService = class()
+
+  end;
+
+implementation
+
+end.

@@ -1,0 +1,22 @@
+unit Services.RecordService;
+
+interface
+
+uses
+  Services.Utils.CrudServices;
+
+type
+  RecordService = class(CrudService)
+    constructor Create(ANameOrId: String); reintroduce;
+  end;
+
+implementation
+
+{ RecordService }
+
+constructor RecordService.Create(ANameOrId: String);
+begin
+
+end;
+
+end.
