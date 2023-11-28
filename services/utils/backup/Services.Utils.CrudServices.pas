@@ -4,7 +4,9 @@ interface
 
 uses
   SysUtils,
+  IdSSLOpenSSL,
   IdHTTP,
+  Classes,
   Generics.Collections,
   {$IFNDEF FPC}
   System.JSON,
@@ -27,10 +29,13 @@ function CrudService.GetList(Page: integer = 1; PerPage: integer = 30;
   Options: TObject = nil): string;
 var
   IdHTTP: TIdHTTP;
-  Response: TStringStream;
+  IdSSL: TIdSSLIOHandlerSocketOpenSSL;
 begin
   IdHTTP := TIdHTTP.Create(nil);
-  Response := TStringStream.Create('');
+  IdSSL := TIdSSLIOHandlerSocketOpenSSL.Create(IdHTTP);
+  IdSSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+
+  IdHTTP.IOHandler := IdSSL;
 
   IdHTTP.Get(baseCrudPath(), Response);
 

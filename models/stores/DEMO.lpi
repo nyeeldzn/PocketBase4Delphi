@@ -37,7 +37,9 @@
       <Unit>
         <Filename Value="../../main.pas"/>
         <IsPartOfProject Value="True"/>
+        <ComponentName Value="Form1"/>
         <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
       </Unit>
       <Unit>
         <Filename Value="../../Client.pas"/>
@@ -97,7 +99,7 @@
     <Version Value="11"/>
     <SearchPaths>
       <IncludeFiles Value="../..;..;utils;../../services/utils;../../services;$(ProjOutDir)"/>
-      <OtherUnitFiles Value="../..;..;utils;../../services/utils;../../services;../../../../Downloads/Indy-RADStudio-Sydney/Lib/Protocols;../../../../Downloads/Indy-RADStudio-Sydney/Lib;../../../../Downloads/Indy-RADStudio-Sydney/Lib/System;../../../../Downloads/Indy-RADStudio-Sydney/Lib/Core"/>
+      <OtherUnitFiles Value="../..;..;utils;../../services/utils;../../services;C:/dev/biblioteca/Indy/Lib/Core/;C:/dev/biblioteca/Indy/Lib/Protocols/;C:/dev/biblioteca/Indy/Lib/Security/;C:/dev/biblioteca/Indy/Lib/System/;C:/dev/biblioteca/Indy/Lib/SuperCore/;C:/dev/biblioteca/Indy/Lib/FreeBSDPort/;C:/dev/biblioteca/Indy/Lib/fpcnotes/;C:/dev/biblioteca/Indy/Lib/FCL/;C:/dev/biblioteca/Indy/Lib/Design/"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>
@@ -106,6 +108,9 @@
       </SyntaxOptions>
     </Parsing>
     <Linking>
+      <Debugging>
+        <DebugInfoType Value="dsDwarf2Set"/>
+      </Debugging>
       <Options>
         <Win32>
           <GraphicApplication Value="True"/>

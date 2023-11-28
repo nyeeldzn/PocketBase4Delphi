@@ -16,8 +16,12 @@ uses
   Services.Utils.Dtos;
 
 type
+
+  { TForm1 }
+
   TForm1 = class(TForm)
     Button1: TButton;
+    Label1: TLabel;
     procedure Button1Click(Sender: TObject);
   private
     { Private declarations }
@@ -46,6 +50,7 @@ begin
     .Collection('posts')
     .GetList();
 
+  Label1.Caption:= result;
   // ClientInstance
 
   // ClientInstance

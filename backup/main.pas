@@ -16,8 +16,12 @@ uses
   Services.Utils.Dtos;
 
 type
+
+  { TForm1 }
+
   TForm1 = class(TForm)
     Button1: TButton;
+    Label1: TLabel;
     procedure Button1Click(Sender: TObject);
   private
     { Private declarations }
@@ -41,11 +45,12 @@ procedure TForm1.Button1Click(Sender: TObject);
 var
   result: string;
 begin
-  ClientInstance := PBClient.Create('http://pocketbase.io/');
+  ClientInstance := PBClient.Create('pocketbase.io/');
   result         := ClientInstance
     .Collection('posts')
     .GetList();
 
+  Label1.Caption:= result;
   // ClientInstance
 
   // ClientInstance

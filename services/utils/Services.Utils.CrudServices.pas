@@ -4,6 +4,7 @@ interface
 
 uses
   SysUtils,
+  IdSSLOpenSSL,
   IdHTTP,
   Classes,
   Generics.Collections,
@@ -28,12 +29,15 @@ function CrudService.GetList(Page: integer = 1; PerPage: integer = 30;
   Options: TObject = nil): string;
 var
   IdHTTP: TIdHTTP;
-  Response: TStringStream;
+  IdSSL: TIdSSLIOHandlerSocketOpenSSL;
 begin
   IdHTTP := TIdHTTP.Create(nil);
-  Response := TStringStream.Create('');
+  IdSSL := TIdSSLIOHandlerSocketOpenSSL.Create(IdHTTP);
+  IdSSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
 
-  IdHTTP.Get(baseCrudPath(), Response);
+  IdHTTP.IOHandler := IdSSL;
+
+  Result := IdHTTP.Get(baseCrudPath());
 
   IdHTTP.Free();
 end;
