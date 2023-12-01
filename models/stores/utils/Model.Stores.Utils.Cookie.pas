@@ -5,7 +5,9 @@ interface
 uses
   SysUtils,
   //System.NetEncoding,
+  {$IFDEF FPC}
   Regex,
+  {$ENDIF}
   Generics.Collections;
 
 const

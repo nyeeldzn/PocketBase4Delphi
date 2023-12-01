@@ -8,13 +8,21 @@ uses
   IdHTTP,
   Classes,
   Generics.Collections,
+
   {$IFNDEF FPC}
+
   System.JSON,
   REST.JSON,
+
   {$ELSE}
-   fpjson, jsonparser,
+
+  fpjson, jsonparser,
+
   {$ENDIF}
+
   Variants,
+  superobject,
+  RESTRequest4D,
   Services.Utils.Dtos,
   Services.Utils.Options,
   Services.Utils.BaseService;
@@ -22,17 +30,19 @@ uses
 type
 
   { CrudService }
-
   CrudService = class(BaseService)
     FQueryOptions: QueryOptions;
 
-    constructor Create(AOwner: TObject); reintroduce;
-    destructor Destroy; override;
     function baseCrudPath(): string; virtual; abstract;
 
-    function GetList(Options: QueryOptions = nil): string;
-    function GetById(AID: string): string;
-    function Insert(const AData: string): string;
+    constructor Create(AOwner: TObject); reintroduce;
+    destructor Destroy; override;
+
+    function GetList(Options: QueryOptions = nil): string; virtual;
+    function GetById(AID: string): string; virtual;
+    function Insert(const AData: string): string; virtual;
+    function Update(const AData: string): string; virtual;
+    function TryDelete(const AData: string; var ResultError: string): boolean; virtual;
   end;
 
 implementation
@@ -53,17 +63,14 @@ end;
 
 function CrudService.GetList(Options: QueryOptions = nil): string;
 var
-  IdHTTP: TIdHTTP;
-  IdSSL: TIdSSLIOHandlerSocketOpenSSL;
-  Header: TTuple;
-  Url: string;
+  Header  : TTuple;
+  Url     : string;
+  Request : IRequest;
+  Response: IResponse;
 begin
-  IdHTTP := TIdHTTP.Create(nil);
-  IdSSL := TIdSSLIOHandlerSocketOpenSSL.Create(IdHTTP);
-  IdSSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
-
-  IdHTTP.IOHandler := IdSSL;
   Url := baseCrudPath();
+
+  Request := TRequest.New.BaseURL(Url);
 
   if Assigned(Options) then
   begin
@@ -75,83 +82,147 @@ begin
 
     for Header in FQueryOptions.Headers do
     begin
-      IdHTTP.Request.CustomHeaders.AddValue(Header.key, VarToStr(Header.Value));
+      Request.AddHeader(Header.key, VarToStr(Header.Value));
     end;
 
     Url := baseCrudPath() + FQueryOptions.Params.GetParamString;
   end;
 
-  Result := IdHTTP.Get(Url);
+  Response := Request
+    .Accept('application/json')
+    .Get;
 
-  IdHTTP.Free();
+  case Response.StatusCode of
+    200:
+      Result := Response.Content;
+  else
+    raise Exception.Create(Response.StatusCode.ToString + ' - ' + Response.StatusText);
+  end;
 end;
 
 function CrudService.GetById(AID: string): string;
 var
-  IdHTTP: TIdHTTP;
-  IdSSL: TIdSSLIOHandlerSocketOpenSSL;
-  Header: TTuple;
-  Url: string;
+  Header  : TTuple;
+  Url     : string;
+  Request : IRequest;
+  Response: IResponse;
 begin
-  IdHTTP := TIdHTTP.Create(nil);
-  IdSSL := TIdSSLIOHandlerSocketOpenSSL.Create(IdHTTP);
-  IdSSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
-
-  IdHTTP.IOHandler := IdSSL;
-  Url := baseCrudPath();
+  Url     := baseCrudPath();
+  Request := TRequest.New;
 
   if Assigned(FQueryOptions) then
   begin
 
     for Header in FQueryOptions.Headers do
     begin
-      IdHTTP.Request.CustomHeaders.AddValue(Header.key, VarToStr(Header.Value));
+      Request.AddHeader(Header.key, VarToStr(Header.Value))
     end;
 
     Url := baseCrudPath() + '/' + AID + FQueryOptions.Params.GetParamString;
   end;
 
-  Result := IdHTTP.Get(Url);
+  Request.BaseURL(Url);
 
-  IdHTTP.Free();
+  Response := Request
+    .Accept('application/json')
+    .Get;
+
+  case Response.StatusCode of
+    200:
+      Result := Response.Content;
+    404:
+      raise Exception.Create('Registro não encontrado | UUID: ' + AID);
+  else
+    raise Exception.Create(Response.StatusCode.ToString + ' - ' + Response.StatusText);
+  end;
+
 end;
 
 function CrudService.Insert(const AData: string): string;
 var
-  IdHTTP: TIdHTTP;
-  IdSSL: TIdSSLIOHandlerSocketOpenSSL;
-  Header: TTuple;
   JSONBody: TStringStream;
-  Url: string;
+  Request : IRequest;
+  Url     : string;
+  Response: IResponse;
 begin
-  IdHTTP := TIdHTTP.Create(nil);
-  IdSSL := TIdSSLIOHandlerSocketOpenSSL.Create(IdHTTP);
-  IdSSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
-
-  IdHTTP.IOHandler := IdSSL;
-  Url := baseCrudPath();
-
+  Url      := baseCrudPath();
   JSONBody := TStringStream.Create(AData);
+  Request  := TRequest.New.BaseURL(Url);
 
   if Assigned(FQueryOptions) then
   begin
     Url := baseCrudPath() + FQueryOptions.Params.GetParamString;
   end;
 
-  IdHTTP.Request.ContentType := 'application/json';
-  IdHTTP.Request.Accept := '*/*';
+  Request.ContentType('application/json');
+  Request.Accept('*/*');
+  Request.AddBody(JSONBody);
 
-  try
-    try
-      Result := IdHttp.Post(URL, JSONBody);
-    finally
-      IdHTTP.Free();
-    end;
-  except
-    on E: Exception do
-      raise E;
+  Response := Request.Post;
+
+  case Response.StatusCode of
+    200:
+      Result := Response.Content
+  else
+    raise Exception.Create(Response.StatusCode.ToString + ' - ' + Response.StatusText);
   end;
 
+end;
+
+function CrudService.TryDelete(const AData: string; var ResultError: string): boolean;
+var
+  Url     : string;
+  Response: IResponse;
+  Obj     : ISuperObject;
+begin
+  Obj      := SO(AData);
+  Url      := baseCrudPath() + '/' + Obj.s['id'];
+  Response := TRequest.New
+    .BaseURL(Url)
+    .Delete;
+
+  case Response.StatusCode of
+    400, 404:
+      begin
+        Result      := False;
+        ResultError := Response.Content
+      end
+  else
+    Result := True;
+  end;
+end;
+
+function CrudService.Update(const AData: string): string;
+var
+  JSONBody: TStringStream;
+  Request : IRequest;
+  Url     : string;
+  Response: IResponse;
+  Obj     : ISuperObject;
+begin
+  Url      := baseCrudPath();
+  JSONBody := TStringStream.Create(AData);
+
+  Obj := SO(AData);
+
+  if Assigned(FQueryOptions) then
+  begin
+    Url := baseCrudPath() + '/' + Obj.s['id'] + FQueryOptions.Params.GetParamString;
+  end;
+
+  Request := TRequest.New.BaseURL(Url);
+  Request.ContentType('application/json');
+  Request.Accept('*/*');
+  Request.AddBody(JSONBody);
+
+  Response := Request.Patch;
+
+  case Response.StatusCode of
+    200:
+      Result := Response.Content
+  else
+    raise Exception.Create(Response.StatusCode.ToString + ' - ' + Response.StatusText);
+  end;
 end;
 
 end.

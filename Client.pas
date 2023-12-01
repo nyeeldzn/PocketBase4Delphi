@@ -1,7 +1,7 @@
 unit Client;
 
 {$IFDEF FPC}
-  {$MODE Delphi}
+{$MODE Delphi}
 {$ENDIF}
 
 interface
@@ -25,7 +25,7 @@ type
   TOptions            = TDictionary<string, Variant>;
   TBeforeSendResult   = TDictionary<string, Variant>;
   TBeforeSendDelegate = function(url: string; Options: QueryOptions): TBeforeSendResult of object;
-  TAfterSendFunc      = function(response: string; data: string)        : string of object;
+  TAfterSendFunc      = function(response: string; data: string)         : string of object;
 
   PBClient = class
   private
@@ -45,22 +45,25 @@ type
       ALang: string = DEFAULT_LANG
       );
 
-    // property Collections: CollectionService read FCollections;
-    function Collection(ANameOrId: string): RecordService;
+    function Collection: RecordService;
   end;
 
 implementation
 
 { PBClient }
 
-function PBClient.Collection(ANameOrId: string): RecordService;
+function PBClient.Collection: RecordService;
 begin
-  if
-    not FRecordServices.ContainsKey(ANameOrId)
-  then
-    FRecordServices.Add(ANameOrId, RecordService.Create(Self, FBaseURL, ANameOrId));
+//  if
+//    not FRecordServices.ContainsKey(ANameOrId)
+//  then
+//    FRecordServices.Add(ANameOrId, );
+//
+//  result := FRecordServices[ANameOrId];
+//
 
-  result := FRecordServices[ANameOrId];
+
+  result := RecordService.Create(Self, FBaseURL)
 end;
 
 constructor PBClient.Create(

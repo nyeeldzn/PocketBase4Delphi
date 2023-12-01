@@ -3,23 +3,40 @@ unit Services.RecordService;
 interface
 
 uses
+  Variants,
+  Json,
+  Rtti,
   SysUtils,
+  RESTRequest4D,
+  Utils.Rtti,
+  Generics.Collections,
+  Services.Utils.Options,
   Services.Utils.Dtos,
-  Services.Utils.CrudServices;
+  Services.Utils.CrudServices, superobject;
 
 type
-
   { RecordService }
 
   RecordService = class(CrudService)
   private
-    FNameOrId: string;
-    FNameURL: string;
+    FNameEndpoint: string;
+    FNameURL     : string;
 
     function baseCrudPath: string; override;
+    function GetClassName<T: class, constructor>: string;
   public
-    constructor Create(AOwner: TObject; ABaseURL: string; ANameOrId: string);
+    constructor Create(AOwner: TObject; ABaseURL: string);
       reintroduce;
+
+    function GetList<T: class, constructor>(Options: QueryOptions = nil): TObjectList<T>; reintroduce;
+
+    function GetById<T: class, constructor>(AID: string): T; reintroduce;
+
+    function Insert<T: class, constructor>(AObject: T): T; reintroduce;
+
+    function Update<T: class, constructor>(AObject: T): T; reintroduce;
+
+    function TryDelete<T: class, constructor>(AObject: T; var ResultError: string): boolean; reintroduce;
 
     function StartPage(APageNumber: integer): RecordService;
     function ResultsPerPage(ARecordsNumber: integer): RecordService;
@@ -30,54 +47,127 @@ type
 
 implementation
 
+function RecordService.Insert<T>(AObject: T): T;
+var
+  Json: string;
+begin
+  FNameEndpoint := GetClassName<T>;
+  Json          := inherited Insert(ObjectHelper.ToJson<T>(AObject));
+
+  Result := ObjectHelper.DeserializeJson<T>(Json)
+end;
+
+function RecordService.GetById<T>(AID: string): T;
+var
+  Json: string;
+begin
+  FNameEndpoint := GetClassName<T>;
+  Json          := inherited GetById(AID);
+
+  Result := ObjectHelper.DeserializeJson<T>(Json);
+end;
+
+function RecordService.GetList<T>(Options: QueryOptions): TObjectList<T>;
+var
+  Json      : string;
+  Obj, Items: ISuperObject;
+  Item      : ISuperObject;
+begin
+  FNameEndpoint := GetClassName<T>;
+  Json          := inherited GetList(Options);
+
+  Obj := SO(Json);
+
+  Items := Obj.O['items'];
+
+  if
+    Assigned(Items) and
+    Items.IsType(stArray)
+  then
+  begin
+    Result := TObjectList<T>.Create;
+
+    for Item in Items do
+    begin
+      Result.Add(ObjectHelper.DeserializeJson<T>(Item.AsJSon()))
+    end;
+  end;
+end;
+
+function RecordService.Update<T>(AObject: T): T;
+var
+  Json: string;
+begin
+  FNameEndpoint := GetClassName<T>;
+  Json          := inherited Update(ObjectHelper.ToJson<T>(AObject));
+
+  Result := ObjectHelper.DeserializeJson<T>(Json);
+end;
+
+function RecordService.TryDelete<T>(AObject: T; var ResultError: string): boolean;
+begin
+  FNameEndpoint := GetClassName<T>;
+  Result        := inherited TryDelete(ObjectHelper.ToJson<T>(AObject), ResultError);
+end;
+
+function RecordService.GetClassName<T>: string;
+begin
+  Result := T.ClassName;
+
+  if
+    copy(Result, 1, 1) = 'T'
+  then
+    Result := copy(Result, 2, Length(Result));
+end;
+
 { RecordService }
 
 function RecordService.baseCrudPath: string;
 begin
-  Result := FNameURL + 'api/collections/' + FNameOrId + '/records';
+  Result := FNameURL + 'api/collections/' + FNameEndpoint + '/records';
 end;
 
-constructor RecordService.Create(AOwner: TObject; ABaseURL: string; ANameOrId: string);
+constructor RecordService.Create(AOwner: TObject; ABaseURL: string);
 begin
   inherited Create(AOwner);
 
   FNameURL := ABaseURL;
-  FNameOrId := ANameOrId;
+
 end;
 
 function RecordService.StartPage(APageNumber: integer): RecordService;
 begin
   FQueryOptions.Params.Add(TTuple.Create('page', IntToStr(APageNumber)));
 
-  Result := Self;
+  Result := self;
 end;
 
 function RecordService.ResultsPerPage(ARecordsNumber: integer): RecordService;
 begin
   FQueryOptions.Params.Add(TTuple.Create('perPage', IntToStr(ARecordsNumber)));
 
-  Result := Self;
+  Result := self;
 end;
 
 function RecordService.SortBy(ASortClause: string): RecordService;
 begin
   FQueryOptions.Params.Add(TTuple.Create('sort', ASortClause));
 
-  Result := Self;
+  Result := self;
 end;
 
 function RecordService.FilterBy(AFilterClause: string): RecordService;
 begin
   FQueryOptions.Params.Add(TTuple.Create('filter', AFilterClause));
 
-  Result := Self;
+  Result := self;
 end;
 
 function RecordService.Fields(AFieldList: string): RecordService;
 begin
   FQueryOptions.Params.Add(TTuple.Create('fields', AFieldList));
 
-  Result := Self;
+  Result := self;
 end;
 
 end.

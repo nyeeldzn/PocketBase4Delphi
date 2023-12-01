@@ -1,0 +1,74 @@
+unit Utils.RTTI;
+
+interface
+
+uses
+  JSON,
+  RTTI,
+  StrUti;
+
+type
+  ObjectHelper = class
+    class function DeserializeJson<T: class, constructor>(const AJSON: string): T;
+  end;
+
+implementation
+
+
+class function ObjectHelper.DeserializeJson<T>(const AJSON: string): T;
+var
+  JSONValue : TJSONValue;
+  JSONObject: TJSONObject;
+  Ctx       : TRttiContext;
+  RTT       : TRttiType;
+  Prop      : TRttiProperty;
+  PropName  : string;
+begin
+  Ctx    := TRttiContext.Create;
+  RTT    := Ctx.GetType(T);
+  Result := T.Create;
+
+  JSONValue := TJSONObject.ParseJSONValue(AJSON);
+  if
+    JSONValue is TJSONObject
+  then
+  begin
+    JSONObject := TJSONObject(JSONValue);
+
+    for Prop in RTT.GetProperties do
+    begin
+      PropName := Prop.Name;
+
+      if
+        Assigned(JSONObject.GetValue(PropName))
+      then
+      begin
+        case Prop.PropertyType.TypeKind of
+          tkUnknown:
+            ;
+          tkInteger:
+            Prop.SetValue(Pointer(Result), StrToIntDef(JSONObject.GetValue(PropName).Value, 0));
+          tkString, tkUString:
+            Prop.SetValue(Pointer(Result), JSONObject.GetValue(PropName).Value);
+          tkChar:
+            Prop.SetValue(Pointer(Result), Char(JSONObject.GetValue(PropName).Value.Chars[0]));
+          tkFloat:
+            Prop.SetValue(Pointer(Result), StrToFloatDef(JSONObject.GetValue(PropName).Value, 0.0));
+          tkWChar:
+            Prop.SetValue(Pointer(Result), JSONObject.GetValue(PropName).Value.Chars[0]);
+          tkLString:
+            Prop.SetValue(Pointer(Result), string(JSONObject.GetValue(PropName).Value));
+          tkWString:
+            Prop.SetValue(Pointer(Result), WideString(JSONObject.GetValue(PropName).Value));
+          tkVariant:
+            ;
+          tkInt64:
+            Prop.SetValue(Pointer(Result), StrToInt64Def(JSONObject.GetValue(PropName).Value, 0));
+        end;
+      end;
+    end;
+
+  end;
+end;
+
+end.

@@ -1,4 +1,4 @@
-unit ClientResponseError;
+﻿unit ClientResponseError;
 
 {$IFDEF FPC}
   {$MODE Delphi}
@@ -8,10 +8,11 @@ interface
 
 uses
 {$IFnDEF FPC}
-  System.JSON;
+  System.JSON,
 {$ELSE}
   TypInfo, Rtti, fpjson, jsonparser,
 {$ENDIF}
+ TypInfo, Rtti,
  SysUtils, Generics.Collections, Variants;
 
 

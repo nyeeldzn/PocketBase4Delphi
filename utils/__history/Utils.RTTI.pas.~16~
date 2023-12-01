@@ -1,0 +1,118 @@
+unit Utils.RTTI;
+
+interface
+
+uses
+  JSON,
+  RTTI,
+  StrUtils,
+  Sysutils,
+  Classes,
+  Variants;
+
+type
+  ObjectHelper = class
+    class function DeserializeJson<T: class, constructor>(const AJSON: string): T;
+    class function ToString<T: class, constructor>(Obj: T): string; reintroduce;
+  end;
+
+implementation
+
+
+class function ObjectHelper.DeserializeJson<T>(const AJSON: string): T;
+var
+  JSONValue : TJSONValue;
+  JSONObject: TJSONObject;
+  Ctx       : TRttiContext;
+  RTT       : TRttiType;
+  Prop      : TRttiProperty;
+  PropName  : string;
+begin
+  Ctx    := TRttiContext.Create;
+  RTT    := Ctx.GetType(T);
+  Result := T.Create;
+
+  JSONValue := TJSONObject.ParseJSONValue(AJSON);
+  if
+    JSONValue is TJSONObject
+  then
+  begin
+    JSONObject := TJSONObject(JSONValue);
+
+    for Prop in RTT.GetProperties do
+    begin
+      PropName := Prop.Name;
+
+      if
+        Assigned(JSONObject.GetValue(PropName))
+      then
+      begin
+        case Prop.PropertyType.TypeKind of
+          tkUnknown:
+            ;
+          tkInteger:
+            Prop.SetValue(Pointer(Result), StrToIntDef(JSONObject.GetValue(PropName).Value, 0));
+          tkString, tkUString:
+            Prop.SetValue(Pointer(Result), JSONObject.GetValue(PropName).Value);
+          tkChar:
+            Prop.SetValue(Pointer(Result), Char(JSONObject.GetValue(PropName).Value.Chars[0]));
+          tkFloat:
+            Prop.SetValue(Pointer(Result), StrToFloatDef(JSONObject.GetValue(PropName).Value, 0.0));
+          tkWChar:
+            Prop.SetValue(Pointer(Result), JSONObject.GetValue(PropName).Value.Chars[0]);
+          tkLString:
+            Prop.SetValue(Pointer(Result), string(JSONObject.GetValue(PropName).Value));
+          tkWString:
+            Prop.SetValue(Pointer(Result), WideString(JSONObject.GetValue(PropName).Value));
+          tkVariant:
+            ;
+          tkInt64:
+            Prop.SetValue(Pointer(Result), StrToInt64Def(JSONObject.GetValue(PropName).Value, 0));
+        end;
+      end;
+    end;
+
+  end;
+end;
+
+class function ObjectHelper.ToString<T>(Obj: T): string;
+var
+  Context   : TRttiContext;
+  RttiType  : TRttiType;
+  Prop      : TRttiProperty;
+  PropValue : TValue;
+  JSONObject: TJSONObject;
+begin
+  Context := TRttiContext.Create;
+  try
+    RttiType   := Context.GetType(T);
+    JSONObject := TJSONObject.Create;
+
+    // Itera sobre as propriedades da classe
+    for Prop in RttiType.GetProperties do
+    begin
+      PropValue := Prop.GetValue(Pointer(Obj));
+
+      // Verifica o tipo da propriedade e adiciona ao JSON
+      case Prop.PropertyType.TypeKind of
+        tkInteger, tkInt64:
+          JSONObject.AddPair(Prop.Name, TJSONNumber.Create(PropValue.AsInt64));
+        tkFloat:
+          JSONObject.AddPair(Prop.Name, TJSONNumber.Create(PropValue.AsExtended));
+        tkString, tkUString, tkWChar, tkLString, tkWString:
+          JSONObject.AddPair(Prop.Name, PropValue.ToString);
+        tkChar:
+          JSONObject.AddPair(Prop.Name, string(PropValue.AsString[1]));
+        tkVariant:
+          JSONObject.AddPair(Prop.Name, TJSONString.Create(VarToStr(PropValue.AsVariant)));
+        // Adicione outros tipos conforme necessário
+      end;
+    end;
+
+    Result := JSONObject.ToString;
+  finally
+    Context.Free;
+  end;
+end;
+
+end.

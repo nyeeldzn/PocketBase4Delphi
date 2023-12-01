@@ -1,13 +1,14 @@
 program DEMO;
 
 {$IFDEF FPC}
-  {$MODE Delphi}
+{$MODE Delphi}
 {$ENDIF}
 
 uses
   Forms,
+  {$IFDEF FPC}
   opensslsockets,
-  Interfaces,
+  {$ENDIF }
   main in '..\..\main.pas' {Form1},
   Client in '..\..\Client.pas',
   ClientResponseError in '..\ClientResponseError.pas',
@@ -21,7 +22,9 @@ uses
   Services.CollectionServices in '..\..\services\Services.CollectionServices.pas',
   Services.Utils.CrudServices in '..\..\services\utils\Services.Utils.CrudServices.pas',
   Model.Stores.LocalAuthStore in 'Model.Stores.LocalAuthStore.pas',
-  Services.RecordService in '..\..\services\Services.RecordService.pas';
+  Services.RecordService in '..\..\services\Services.RecordService.pas',
+  Demo.Post in '..\..\Demo.Post.pas',
+  Utils.RTTI in '..\..\utils\Utils.RTTI.pas';
 
 {$R *.res}
 
@@ -30,4 +33,5 @@ begin
   Application.MainFormOnTaskbar := True;
   Application.CreateForm(TForm1, Form1);
   Application.Run;
+
 end.
