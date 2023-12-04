@@ -15,7 +15,8 @@ uses
   Model.Store.BaseAuthStore,
   Services.CollectionServices,
   Services.RecordService,
-  Model.Stores.LocalAuthStore;
+  Model.Stores.LocalAuthStore,
+  Services.RealtimeService;
 
 const
   DEFAULT_LANG     = 'en-US';
@@ -35,8 +36,8 @@ type
     FLang              : string;
     FAuthStore         : BaseAuthStore;
     // FSettings          : SettingsService;
-    FCollections   : CollectionService;
-    FRecordServices: TDictionary<string, RecordService>;
+    FCollections     : CollectionService;
+    FRecordServices  : TDictionary<string, RecordService>;
 
   public
     constructor Create(
@@ -54,14 +55,13 @@ implementation
 
 function PBClient.Collection: RecordService;
 begin
-//  if
-//    not FRecordServices.ContainsKey(ANameOrId)
-//  then
-//    FRecordServices.Add(ANameOrId, );
-//
-//  result := FRecordServices[ANameOrId];
-//
-
+  // if
+  // not FRecordServices.ContainsKey(ANameOrId)
+  // then
+  // FRecordServices.Add(ANameOrId, );
+  //
+  // result := FRecordServices[ANameOrId];
+  //
 
   result := RecordService.Create(Self, FBaseURL)
 end;
@@ -82,8 +82,8 @@ begin
   else
     FAuthStore := LocalAuthStore.Create();
 
-  FCollections    := CollectionService.Create(Self);
-  FRecordServices := TDictionary<string, RecordService>.Create;
+  FCollections      := CollectionService.Create(Self);
+  FRecordServices   := TDictionary<string, RecordService>.Create;
   // FSettings    := SettingsService.Create(Self);
 end;
 

@@ -24,7 +24,9 @@ uses
   Model.Stores.LocalAuthStore in 'Model.Stores.LocalAuthStore.pas',
   Services.RecordService in '..\..\services\Services.RecordService.pas',
   Demo.Post in '..\..\Demo.Post.pas',
-  Utils.RTTI in '..\..\utils\Utils.RTTI.pas';
+  Utils.RTTI in '..\..\utils\Utils.RTTI.pas',
+  Services.RealtimeService in '..\..\services\Services.RealtimeService.pas',
+  Services.Utils.ServerSentEvents in '..\..\services\utils\Services.Utils.ServerSentEvents.pas';
 
 {$R *.res}
 

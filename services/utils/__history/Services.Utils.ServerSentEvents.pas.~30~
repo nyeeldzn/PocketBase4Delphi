@@ -1,0 +1,126 @@
+unit Services.Utils.ServerSentEvents;
+
+interface
+
+uses
+  System.Generics.Collections,
+  IdHTTP,
+  IdGlobal,
+  SysUtils;
+
+type
+
+  { TIndySSEClient }
+
+  TEventListenerProcedure = reference to procedure(AEvent: string);
+
+  TMessageEvent = class
+  private
+    FId   : string;
+    FEvent: string;
+    FData : string;
+  public
+    property id   : string read FId write FId;
+    property event: string read FEvent write FEvent;
+    property data : string read FData write FData;
+  end;
+
+  TIndySSEClient = class(TObject)
+  private
+    FEventsSubscribed: TDictionary<string, TEventListenerProcedure>;
+    EventStream      : TIdEventStream;
+    IdHTTP           : TIdHTTP;
+    ChunkCount       : Integer;
+    SSE_URL          : string;
+  protected
+    procedure MyOnWrite(const ABuffer: TIdBytes; AOffset, ACount: Longint; var VResult: Longint);
+  public
+    constructor Create(const URL: string);
+    destructor Destroy; override;
+
+    procedure AddEventListener(AEvent: string; AToDo: TEventListenerProcedure);
+
+    procedure Run;
+    procedure Stop;
+  end;
+
+procedure RunTest(URL: string);
+
+implementation
+
+procedure RunTest;
+var
+  Client: TIndySSEClient;
+begin
+  WriteLn('URL for Server-sent events: ' + URL);
+
+  Client := TIndySSEClient.Create(URL);
+  try
+    try
+      Client.Run;
+    except
+      on E: Exception do
+        WriteLn(E.Message);
+    end;
+  finally
+    Client.Free;
+  end;
+end;
+
+{ TIndySSEClient }
+
+procedure TIndySSEClient.AddEventListener(AEvent: string;
+  AToDo: TEventListenerProcedure);
+begin
+  FEventsSubscribed.Add(AEvent, AToDo);
+end;
+
+constructor TIndySSEClient.Create;
+begin
+  inherited Create;
+
+  SSE_URL := URL;
+
+  FEventsSubscribed := TDictionary<string, TEventListenerProcedure>.Create;
+
+  EventStream         := TIdEventStream.Create;
+  EventStream.OnWrite := MyOnWrite;
+
+  IdHTTP                      := TIdHTTP.Create;
+  IdHTTP.Request.Accept       := 'text/event-stream';
+  IdHTTP.Request.CacheControl := 'no-store';
+end;
+
+destructor TIndySSEClient.Destroy;
+begin
+  IdHTTP.Free;
+  EventStream.Free;
+
+  inherited;
+end;
+
+procedure TIndySSEClient.Run;
+begin
+  IdHTTP.Get(SSE_URL, EventStream);
+end;
+
+procedure TIndySSEClient.Stop;
+begin
+  IdHTTP.Disconnect;
+end;
+
+procedure TIndySSEClient.MyOnWrite;
+var
+  ReceivedEvent: string;
+begin
+  ReceivedEvent := IndyTextEncoding_UTF8.GetString(ABuffer);
+
+  Inc(ChunkCount);
+
+  if
+    FEventsSubscribed.ContainsKey(ReceivedEvent)
+  then
+    FEventsSubscribed[ReceivedEvent](ReceivedEvent);
+end;
+
+end.

@@ -12,15 +12,20 @@ uses
   Generics.Collections,
   Services.Utils.Options,
   Services.Utils.Dtos,
-  Services.Utils.CrudServices, superobject;
+  Services.Utils.CrudServices,
+  Services.RealtimeService,
+  superobject;
 
 type
   { RecordService }
 
+  TSubscribeAction = reference to procedure();
+
   RecordService = class(CrudService)
   private
-    FNameEndpoint: string;
-    FNameURL     : string;
+    FNameEndpoint    : string;
+    FNameURL         : string;
+    FRealtimeServices: RealtimeService;
 
     function baseCrudPath: string; override;
     function GetClassName<T: class, constructor>: string;
@@ -43,6 +48,8 @@ type
     function SortBy(ASortClause: string): RecordService;
     function FilterBy(AFilterClause: string): RecordService;
     function Fields(AFieldList: string): RecordService;
+
+    procedure Subscribe(AToDo: TProcCallback);
   end;
 
 implementation
@@ -131,8 +138,8 @@ constructor RecordService.Create(AOwner: TObject; ABaseURL: string);
 begin
   inherited Create(AOwner);
 
-  FNameURL := ABaseURL;
-
+  FNameURL          := ABaseURL;
+  FRealtimeServices := RealtimeService.Create(FNameURL, FNameEndpoint);
 end;
 
 function RecordService.StartPage(APageNumber: integer): RecordService;
@@ -140,6 +147,11 @@ begin
   FQueryOptions.Params.Add(TTuple.Create('page', IntToStr(APageNumber)));
 
   Result := self;
+end;
+
+procedure RecordService.Subscribe(AToDo: TProcCallback);
+begin
+  FRealtimeServices.Subscribe(FNameEndpoint, AToDo);
 end;
 
 function RecordService.ResultsPerPage(ARecordsNumber: integer): RecordService;
