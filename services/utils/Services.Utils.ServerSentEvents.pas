@@ -3,10 +3,13 @@ unit Services.Utils.ServerSentEvents;
 interface
 
 uses
+  System.Types,
   System.Generics.Collections,
   IdHTTP,
   IdGlobal,
-  SysUtils;
+  SysUtils,
+  StrUtils,
+  superobject;
 
 type
 
@@ -14,30 +17,22 @@ type
 
   TMessageEvent = class;
 
-  TEventListenerProcedure = reference to procedure(AEvent: TMessageEvent);
+  TEventListener = reference to procedure(E: TMessageEvent);
 
   TMessageEvent = class
   private
     FId   : string;
     FEvent: string;
-    FData : string;
+    FData : ISuperObject;
   public
     property id   : string read FId write FId;
     property event: string read FEvent write FEvent;
-    property data : string read FData write FData;
-  end;
-
-  TEventListener = class
-  private
-    FElementId: string;
-  public
-    constructor Create(const AElementId: String);
-    procedure HandleEvent(Sender: TObject);
+    property data : ISuperObject read FData write FData;
   end;
 
   TIndySSEClient = class(TObject)
   private
-    FEventsSubscribed: TDictionary<string, TEventListenerProcedure>;
+    FEventsSubscribed: TDictionary<string, TEventListener>;
     EventStream      : TIdEventStream;
     IdHTTP           : TIdHTTP;
     ChunkCount       : Integer;
@@ -48,13 +43,15 @@ type
     constructor Create(const URL: string);
     destructor Destroy; override;
 
-    procedure AddEventListener(AEvent: string; AToDo: TEventListenerProcedure);
+    procedure AddEventListener(AEvent: string; AToDo: TEventListener);
+    procedure RemoveEventListener(AEvent: string; AToDo: TEventListener);
 
     procedure Run;
     procedure Stop;
   end;
 
 procedure RunTest(URL: string);
+function CreateEventSuperObject(texto: string): TMessageEvent;
 
 implementation
 
@@ -83,7 +80,7 @@ end;
 { TIndySSEClient }
 
 procedure TIndySSEClient.AddEventListener(AEvent: string;
-  AToDo: TEventListenerProcedure);
+  AToDo: TEventListener);
 begin
   FEventsSubscribed.Add(AEvent, AToDo);
 end;
@@ -94,14 +91,20 @@ begin
 
   SSE_URL := URL;
 
-  FEventsSubscribed := TDictionary<string, TEventListenerProcedure>.Create;
+  FEventsSubscribed := TDictionary<string, TEventListener>.Create;
 
   EventStream         := TIdEventStream.Create;
   EventStream.OnWrite := MyOnWrite;
 
-  IdHTTP                      := TIdHTTP.Create;
-  IdHTTP.Request.Accept       := 'text/event-stream';
-  IdHTTP.Request.CacheControl := 'no-store';
+  IdHTTP := TIdHTTP.Create;
+  // IdHTTP.Request.Accept       := 'text/event-stream';
+  // IdHTTP.Request.CacheControl := 'no-store';
+
+  IdHTTP.Request.Accept      := 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7';
+  IdHTTP.Request.UserAgent   := 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
+  IdHTTP.Request.ContentType := 'text/event-stream';
+
+  IdHTTP.HandleRedirects := True;
 end;
 
 destructor TIndySSEClient.Destroy;
@@ -110,6 +113,12 @@ begin
   EventStream.Free;
 
   inherited;
+end;
+
+procedure TIndySSEClient.RemoveEventListener(AEvent: string;
+  AToDo: TEventListener);
+begin
+  FEventsSubscribed.Remove(AEvent);
 end;
 
 procedure TIndySSEClient.Run;
@@ -128,8 +137,7 @@ var
   ReceivedEvent    : TMessageEvent;
 begin
   ReceivedEventData := IndyTextEncoding_UTF8.GetString(ABuffer);
-
-  ReceivedEvent := ObjectHelper.DeserializeJson<TMessageEvent>(ReceivedEventData);
+  ReceivedEvent     := CreateEventSuperObject(ReceivedEventData);
 
   Inc(ChunkCount);
 
@@ -141,19 +149,68 @@ begin
   finally
     FreeAndNil(ReceivedEvent)
   end;
-
 end;
 
-{ TEventListener }
+function CreateEventSuperObject(texto: string): TMessageEvent;
+var
+  linhas: TStringDynArray;
 
-constructor TEventListener.Create(const AElementId: String);
+  chave      : string;
+  valor      : string;
+  posicaoData: Integer;
 begin
-  FElementId := AElementId;
-end;
+  Result       := TMessageEvent.Create;
+  Result.id    := '';
+  Result.event := '';
+  Result.data  := SO();
 
-procedure TEventListener.HandleEvent(Sender: TObject);
-begin
-  //
+  // Divide o texto por linhas
+  linhas := SplitString(texto, #$A);
+
+  // Itera sobre cada linha para extrair os dados
+  for var linha in linhas do
+  begin
+    if
+      linha = ''
+    then
+      continue;
+
+    var
+    partes := SplitString(linha, ':');
+
+    if
+      Length(partes) = 2
+    then
+    begin
+      chave := Trim(partes[0]);
+      valor := Trim(partes[1]);
+
+      if
+        chave = 'id'
+      then
+        Result.id := valor
+      else
+        if
+        chave = 'event'
+      then
+        Result.event := valor
+    end;
+
+    if
+      Length(partes) > 2
+    then
+    begin
+      chave := Trim(partes[0]);
+
+      posicaoData := Length(chave);
+
+      if
+        chave = 'data'
+      then
+        Result.data := SO(Copy(linha, (posicaoData + 2), Length(linha) - (posicaoData)));
+    end;
+
+  end;
 end;
 
 end.

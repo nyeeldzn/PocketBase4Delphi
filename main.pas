@@ -27,7 +27,8 @@ uses
   Generics.Collections,
   Services.Utils.Dtos,
   Services.RecordService,
-  Demo.Post;
+  Demo.Post,
+  superobject;
 
 type
 
@@ -36,9 +37,11 @@ type
   TForm1 = class(TForm)
     Button1: TButton;
     Memo1: TMemo;
+    Button2: TButton;
 
     procedure Button1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
   private
     { Private declarations }
     ClientInstance: PBClient;
@@ -133,13 +136,15 @@ begin
   //
   //
 
-  ClientInstance
+    ClientInstance
     .Collection
     .Subscribe(
-    procedure(AData: string)
+    'posts',
+    procedure(AData: ISuperObject)
     begin
-      ShowMessage(AData);
+      Memo1.Text := AData.AsJSon(True);
     end);
+
 end;
 
 function FormatarJSON(const JSONString: string): string;
@@ -198,6 +203,18 @@ begin
 
     LastChar := JSONString[Index];
   end;
+end;
+
+procedure TForm1.Button2Click(Sender: TObject);
+begin
+  ClientInstance
+    .Collection
+    .Subscribe(
+    'hello',
+    procedure(AData: ISuperObject)
+    begin
+      Memo1.Text := AData.AsJSon(True);
+    end);
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);

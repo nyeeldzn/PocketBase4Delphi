@@ -10,11 +10,20 @@ uses
   IdHTTP,
   IdGlobal,
   Sysutils,
-  Services.Utils.ServerSentEvents;
+  Services.Utils.ServerSentEvents,
+  RESTRequest4D,
+  superobject;
+
+CONST
+  ENDPOINT_REALTIME = 'api/realtime';
+  SUBMIT_BODY       = '{' +
+    '"clientId": %s,' +
+    '"subscriptions": %s' +
+    '}';
 
 type
   UnsubscribeFunction = reference to procedure();
-  TProcCallback       = reference to procedure(AData: string);
+  TProcCallback       = reference to procedure(AData: ISuperObject);
 
   RealtimeService = class(BaseService)
   private
@@ -28,15 +37,19 @@ type
     FReconnectAttempts           : Integer;
     FMaxReconnectAttempts        : Integer;
     FPredefinedReconnectIntervals: TStringList;
-    FSubscriptions               : TDictionary<String, TObjectList<TEventListener>>;
+    FSubscriptions               : TDictionary<String, TList<TEventListener>>;
     // FPendingConnects: TObjectList<PromisseCallbacks>;
 
     FEventSource: TIndySSEClient;
 
     procedure AddAllSubscriptionsListeners();
     procedure RemoveAllSubscriptionListeners();
+    function GetNonEmptySubscriptionsTopics(): TStringList;
+    function GetSubscriptionCancelKey(): string;
+    procedure OnChangeSubscriptions(Sender: TObject; const Item: TList<TEventListener>; Action: TCollectionNotification);
   public
-    constructor Create(const AURL: string; const AEndpoint: string); reintroduce;
+    constructor Create(const AURL: string; const AEndpoint: string);
+      reintroduce;
     function IsConnected(): boolean;
     procedure Subscribe(ATopic: string; ACallback: TProcCallback);
     procedure SubmitSubscriptions();
@@ -56,7 +69,7 @@ uses
 procedure RealtimeService.AddAllSubscriptionsListeners;
 begin
   if
-    Assigned(FEventSource)
+    not Assigned(FEventSource)
   then
     exit;
 
@@ -64,14 +77,9 @@ begin
 
   for var topic in FSubscriptions do
   begin
-    for var listener in FSubscriptions[topic.Key] do
+    for var listener in topic.Value do
     begin
-      FEventSource.AddEventListener(topic.Key,
-        procedure(AEvent: TMessageEvent)
-        begin
-          listener.HandleEvent(FEventSource)
-        end
-        );
+      FEventSource.AddEventListener(topic.Key, listener);
     end;
   end;
 end;
@@ -91,12 +99,35 @@ begin
   FUrl      := AURL;
   FEndpoint := AEndpoint;
 
-  FSubscriptions := TDictionary < String, TObjectList < TEventListener >>.Create;
+  FSubscriptions := TDictionary < String, TList < TEventListener >>.Create;
+
+  FSubscriptions.OnValueNotify := OnChangeSubscriptions;
 end;
 
 procedure RealtimeService.Disconnect(AFromReconnect: boolean = false);
 begin
-  FEventSource.Stop;
+  if
+    IsConnected
+  then
+    FEventSource.Stop;
+end;
+
+function RealtimeService.GetNonEmptySubscriptionsTopics: TStringList;
+begin
+  Result := TStringList.Create;
+
+  for var topic in FSubscriptions do
+  begin
+    if
+      topic.Value.Count > 0
+    then
+      Result.Add(topic.Key);
+  end;
+end;
+
+function RealtimeService.GetSubscriptionCancelKey: string;
+begin
+  Result := 'realtime_' + FClientID;
 end;
 
 procedure RealtimeService.InitConnect;
@@ -106,7 +137,7 @@ begin
 
   Disconnect(True);
 
-  FEventSource := TIndySSEClient.Create(FUrl + '/api/realtime');
+  FEventSource := TIndySSEClient.Create(FUrl + ENDPOINT_REALTIME);
   FEventSource.AddEventListener('PB_CONNECT',
     procedure(AEvent: TMessageEvent)
     begin
@@ -131,12 +162,18 @@ end;
 
 function RealtimeService.IsConnected: boolean;
 begin
+  Result := Assigned(FEventSource) and (FClientID <> '');
+end;
 
+procedure RealtimeService.OnChangeSubscriptions(Sender: TObject;
+const Item: TList<TEventListener>; Action: TCollectionNotification);
+begin
+  // SubmitSubscriptions();
 end;
 
 procedure RealtimeService.RemoveAllSubscriptionListeners;
 begin
-  if 
+  if
     not Assigned(FEventSource)
   then
     exit;
@@ -145,29 +182,107 @@ begin
   begin
     for var listener in FSubscriptions[topic.Key] do
     begin
-      // FEventSource.RemoveEventListener(topic, listener)
+      FEventSource.RemoveEventListener(topic.Key, listener)
     end;
   end;
 
 end;
 
 procedure RealtimeService.SubmitSubscriptions;
+var
+  Response: IResponse;
+  Topics  : string;
+  Body    : string;
 begin
   if
     FClientID = ''
   then
     exit;
 
+  AddAllSubscriptionsListeners();
+
+  FLastSentTopics := GetNonEmptySubscriptionsTopics();
+
+  if
+    FLastSentTopics.Count > 0
+  then
+  begin
+    Topics := '[';
+    for var topic in FLastSentTopics do
+    begin
+      // if topic = 'posts' then
+      // continue;
+
+      if
+        not(FLastSentTopics.IndexOf(topic) = Pred(FLastSentTopics.Count))
+      then
+        Topics := Topics + '"' + topic + '",'
+      else
+        Topics := Topics + '"' + topic + '"]';
+    end;
+
+    Body := Format(SUBMIT_BODY, ['"' + FClientID + '"', Topics]);
+
+    Body     := StringReplace(Body, #$D#$A, '', [rfReplaceAll]);
+    Response := TRequest.New.BaseURL(FUrl + ENDPOINT_REALTIME)
+      .AddBody(Body)
+      .Post;
+
+    if
+      Response.StatusCode <> 204
+    then
+      raise Exception.Create('Erro ao enviar inscrição de atualização')
+    else
+    begin
+    end;
+  end;
 end;
 
 procedure RealtimeService.Subscribe(ATopic: string; ACallback: TProcCallback);
 begin
-  if 
+  if
     ATopic = ''
   then
     raise Exception.Create('Topic must be set');
 
-      
+  if
+    not FSubscriptions.ContainsKey(ATopic)
+  then
+  begin
+    FSubscriptions.Add(ATopic, TList<TEventListener>.Create);
+  end;
+
+  FSubscriptions[ATopic].Add(
+    procedure(AEvent: TMessageEvent)
+    begin
+      ACallback(AEvent.data)
+    end
+    );
+
+  if
+    not IsConnected
+  then
+  begin
+    Connect()
+  end
+  else
+    if
+    FSubscriptions[ATopic].Count = 1
+  then
+  begin
+    SubmitSubscriptions();
+    // FEventSource.AddEventListener(ATopic, listener);
+  end
+  else
+  begin
+    FEventSource.AddEventListener(ATopic,
+      procedure(AEvent: TMessageEvent)
+      begin
+        ACallback(AEvent.data)
+      end
+      );
+  end;
+
 end;
 
 end.

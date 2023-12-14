@@ -25,12 +25,12 @@ type
   private
     FNameEndpoint    : string;
     FNameURL         : string;
-    FRealtimeServices: RealtimeService;
+    FRealtimeServices: ^RealtimeService;
 
     function baseCrudPath: string; override;
     function GetClassName<T: class, constructor>: string;
   public
-    constructor Create(AOwner: TObject; ABaseURL: string);
+    constructor Create(AOwner: TObject; ABaseURL: string; var ARealtimeService: RealtimeService);
       reintroduce;
 
     function GetList<T: class, constructor>(Options: QueryOptions = nil): TObjectList<T>; reintroduce;
@@ -49,7 +49,7 @@ type
     function FilterBy(AFilterClause: string): RecordService;
     function Fields(AFieldList: string): RecordService;
 
-    procedure Subscribe(AToDo: TProcCallback);
+    procedure Subscribe(ATopic: string; AToDo: TProcCallback);
   end;
 
 implementation
@@ -134,12 +134,12 @@ begin
   Result := FNameURL + 'api/collections/' + FNameEndpoint + '/records';
 end;
 
-constructor RecordService.Create(AOwner: TObject; ABaseURL: string);
+constructor RecordService.Create(AOwner: TObject; ABaseURL: string; var ARealtimeService: RealtimeService);
 begin
   inherited Create(AOwner);
 
   FNameURL          := ABaseURL;
-  FRealtimeServices := RealtimeService.Create(FNameURL, FNameEndpoint);
+  FRealtimeServices := @ARealtimeService;
 end;
 
 function RecordService.StartPage(APageNumber: integer): RecordService;
@@ -149,9 +149,9 @@ begin
   Result := self;
 end;
 
-procedure RecordService.Subscribe(AToDo: TProcCallback);
+procedure RecordService.Subscribe(ATopic: string; AToDo: TProcCallback);
 begin
-  FRealtimeServices.Subscribe(FNameEndpoint, AToDo);
+  FRealtimeServices.Subscribe(ATopic, AToDo);
 end;
 
 function RecordService.ResultsPerPage(ARecordsNumber: integer): RecordService;

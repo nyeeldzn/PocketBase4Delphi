@@ -7,7 +7,9 @@ unit Client;
 interface
 
 uses
+  Forms,
   Variants,
+  System.Classes,
   Generics.Collections,
   StrUtils,
   Services.Utils.Options,
@@ -36,6 +38,8 @@ type
     FLang              : string;
     FAuthStore         : BaseAuthStore;
     // FSettings          : SettingsService;
+
+    FRealtimeServices: RealtimeService;
     FCollections     : CollectionService;
     FRecordServices  : TDictionary<string, RecordService>;
 
@@ -55,15 +59,14 @@ implementation
 
 function PBClient.Collection: RecordService;
 begin
-  // if
-  // not FRecordServices.ContainsKey(ANameOrId)
-  // then
-  // FRecordServices.Add(ANameOrId, );
-  //
-  // result := FRecordServices[ANameOrId];
-  //
 
-  result := RecordService.Create(Self, FBaseURL)
+  // if
+  // not FRecordServices.ContainsKey
+  // then
+  // FRecordServices.Add( RecordService.Create(Self, FBaseURL, FRealtimeServices))
+  // else
+
+  Result := RecordService.Create(Self, FBaseURL, FRealtimeServices);
 end;
 
 constructor PBClient.Create(
@@ -71,6 +74,8 @@ constructor PBClient.Create(
   AAuthStore: BaseAuthStore = nil;
   ALang: string = DEFAULT_LANG
   );
+var
+  Thread: TThread;
 begin
   FBaseURL := ABaseURL;
   FLang    := ALang;
@@ -84,7 +89,19 @@ begin
 
   FCollections      := CollectionService.Create(Self);
   FRecordServices   := TDictionary<string, RecordService>.Create;
-  // FSettings    := SettingsService.Create(Self);
+  FRealtimeServices := RealtimeService.Create(ABaseURL, '');
+
+  Thread := TThread.CreateAnonymousThread(
+    procedure
+    begin
+      FRealtimeServices.Connect;
+    end);
+
+  Thread.Start;
+  while not FRealtimeServices.IsConnected do
+  begin
+    Application.ProcessMessages;
+  end;
 end;
 
 end.

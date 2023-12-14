@@ -1,0 +1,216 @@
+unit Services.Utils.ServerSentEvents;
+
+interface
+
+uses
+  System.Types,
+  System.Generics.Collections,
+  IdHTTP,
+  IdGlobal,
+  SysUtils,
+  StrUtils,
+  superobject;
+
+type
+
+  { TIndySSEClient }
+
+  TMessageEvent = class;
+
+  TEventListener = reference to procedure(E: TMessageEvent);
+
+  TMessageEvent = class
+  private
+    FId   : string;
+    FEvent: string;
+    FData : ISuperObject;
+  public
+    property id   : string read FId write FId;
+    property event: string read FEvent write FEvent;
+    property data : ISuperObject read FData write FData;
+  end;
+
+  TIndySSEClient = class(TObject)
+  private
+    FEventsSubscribed: TDictionary<string, TEventListener>;
+    EventStream      : TIdEventStream;
+    IdHTTP           : TIdHTTP;
+    ChunkCount       : Integer;
+    SSE_URL          : string;
+  protected
+    procedure MyOnWrite(const ABuffer: TIdBytes; AOffset, ACount: Longint; var VResult: Longint);
+  public
+    constructor Create(const URL: string);
+    destructor Destroy; override;
+
+    procedure AddEventListener(AEvent: string; AToDo: TEventListener);
+    procedure RemoveEventListener(AEvent: string; AToDo: TEventListener);
+
+    procedure Run;
+    procedure Stop;
+  end;
+
+procedure RunTest(URL: string);
+function CreateEventSuperObject(texto: string): TMessageEvent;
+
+implementation
+
+uses
+  Utils.RTTI;
+
+procedure RunTest;
+var
+  Client: TIndySSEClient;
+begin
+  WriteLn('URL for Server-sent events: ' + URL);
+
+  Client := TIndySSEClient.Create(URL);
+  try
+    try
+      Client.Run;
+    except
+      on E: Exception do
+        WriteLn(E.Message);
+    end;
+  finally
+    Client.Free;
+  end;
+end;
+
+{ TIndySSEClient }
+
+procedure TIndySSEClient.AddEventListener(AEvent: string;
+  AToDo: TEventListener);
+begin
+  FEventsSubscribed.Add(AEvent, AToDo);
+end;
+
+constructor TIndySSEClient.Create;
+begin
+  inherited Create;
+
+  SSE_URL := URL;
+
+  FEventsSubscribed := TDictionary<string, TEventListener>.Create;
+
+  EventStream         := TIdEventStream.Create;
+  EventStream.OnWrite := MyOnWrite;
+
+  IdHTTP := TIdHTTP.Create;
+  // IdHTTP.Request.Accept       := 'text/event-stream';
+  // IdHTTP.Request.CacheControl := 'no-store';
+
+  IdHTTP.Request.Accept      := 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7';
+  IdHTTP.Request.UserAgent   := 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
+  IdHTTP.Request.ContentType := 'text/event-stream';
+
+  IdHTTP.HandleRedirects := True;
+end;
+
+destructor TIndySSEClient.Destroy;
+begin
+  IdHTTP.Free;
+  EventStream.Free;
+
+  inherited;
+end;
+
+procedure TIndySSEClient.RemoveEventListener(AEvent: string;
+  AToDo: TEventListener);
+begin
+
+end;
+
+procedure TIndySSEClient.Run;
+begin
+  IdHTTP.Get(SSE_URL, EventStream);
+end;
+
+procedure TIndySSEClient.Stop;
+begin
+  IdHTTP.Disconnect;
+end;
+
+procedure TIndySSEClient.MyOnWrite;
+var
+  ReceivedEventData: string;
+  ReceivedEvent    : TMessageEvent;
+begin
+  ReceivedEventData := IndyTextEncoding_UTF8.GetString(ABuffer);
+  ReceivedEvent     := CreateEventSuperObject(ReceivedEventData);
+
+  Inc(ChunkCount);
+
+  try
+    if
+      FEventsSubscribed.ContainsKey(ReceivedEvent.event)
+    then
+      FEventsSubscribed[ReceivedEvent.event](ReceivedEvent);
+  finally
+    FreeAndNil(ReceivedEvent)
+  end;
+end;
+
+function CreateEventSuperObject(texto: string): TMessageEvent;
+var
+  linhas: TStringDynArray;
+
+  chave      : string;
+  valor      : string;
+  posicaoData: Integer;
+begin
+  Result       := TMessageEvent.Create;
+  Result.id    := '';
+  Result.event := '';
+  Result.data  := SO();
+
+  // Divide o texto por linhas
+  linhas := SplitString(texto, #$A);
+
+  // Itera sobre cada linha para extrair os dados
+  for var linha in linhas do
+  begin
+    if
+      linha = ''
+    then
+      continue;
+
+    var
+    partes := SplitString(linha, ':');
+
+    if
+      Length(partes) = 2
+    then
+    begin
+      chave := Trim(partes[0]);
+      valor := Trim(partes[1]);
+
+      if
+        chave = 'id'
+      then
+        Result.id := valor
+      else
+        if
+        chave = 'event'
+      then
+        Result.event := valor
+    end;
+
+    if
+      Length(partes) > 2
+    then
+    begin
+      chave := Trim(partes[0]);
+
+      posicaoData := Length(chave);
+
+      if
+        chave = 'data'
+      then
+        Result.data := SO(Copy(linha, (posicaoData + 2), Length(linha) - (posicaoData)));
+    end;
+
+  end;
+end;
+
+end.
