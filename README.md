@@ -1,6 +1,6 @@
-#Greenbase2Delphi
-##Exemplos de uso:
-###Classe
+# Greenbase2Delphi
+## Exemplos de uso:
+### Classe
 ```
   TPosts = class
   private
@@ -19,7 +19,7 @@
     function Equals(APost: TPosts): boolean; reintroduce;
   end;
 ```
-###Implementação em código
+### Implementação em código
 ```
   Post, post2, post3, post4: TPosts;
   ResultDeleteError        : string;
