@@ -7,6 +7,7 @@ unit Client;
 interface
 
 uses
+  Sysutils,
   Forms,
   Variants,
   System.Classes,
@@ -100,6 +101,11 @@ begin
   Thread.Start;
   while not FRealtimeServices.IsConnected do
   begin
+    if
+      Assigned(Thread.FatalException)
+    then
+      raise Exception.Create(Exception(Thread.FatalException).Message);
+
     Application.ProcessMessages;
   end;
 end;

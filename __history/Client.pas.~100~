@@ -59,21 +59,14 @@ implementation
 
 function PBClient.Collection: RecordService;
 begin
+
   // if
-  // not FRecordServices.ContainsKey(ANameOrId)
+  // not FRecordServices.ContainsKey
   // then
-  // FRecordServices.Add(ANameOrId, );
-  //
-  // result := FRecordServices[ANameOrId];
-  //
+  // FRecordServices.Add( RecordService.Create(Self, FBaseURL, FRealtimeServices))
+  // else
 
-  if
-    not FRecordServices.ContainsKey(ANameOrId)
-  then
-    FRecordServices.Add(RecordService.Create(Self, FBaseURL, FRealtimeServices))
-  else
-    Result := FRecordServices[ANameOrId];
-
+  Result := RecordService.Create(Self, FBaseURL, FRealtimeServices);
 end;
 
 constructor PBClient.Create(
@@ -107,6 +100,11 @@ begin
   Thread.Start;
   while not FRealtimeServices.IsConnected do
   begin
+    if
+      Assigned(Thread.FatalException)
+    then
+      raise Exception.Create(Exception(Thread.FatalException).Message);
+
     Application.ProcessMessages;
   end;
 end;

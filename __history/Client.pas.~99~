@@ -59,22 +59,14 @@ implementation
 
 function PBClient.Collection: RecordService;
 begin
+
   // if
-  // not FRecordServices.ContainsKey(ANameOrId)
+  // not FRecordServices.ContainsKey
   // then
-  // FRecordServices.Add(ANameOrId, );
-  //
-  // result := FRecordServices[ANameOrId];
-  //
+  // FRecordServices.Add( RecordService.Create(Self, FBaseURL, FRealtimeServices))
+  // else
 
-  if
-    not FRecordServices.ContainsKey(ANameOrId)
-  then
-
-  FRecordServices
-
-
-  result := RecordService.Create(Self, FBaseURL, FRealtimeServices)
+  Result := RecordService.Create(Self, FBaseURL, FRealtimeServices);
 end;
 
 constructor PBClient.Create(
